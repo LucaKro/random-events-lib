@@ -5,13 +5,13 @@
 #include <tuple>
 #include <memory>
 #include <string>
+#include "flat_set.h"              // <<< NEW
 
 // FORWARD DECLARATIONS
 class AbstractSimpleSet;
 class AbstractCompositeSet;
 
-
-// TYPE DEFINITIONS
+/* ---------- POINTER COMPARATOR UNCHANGED ---------- */
 template<typename T>
 struct PointerLess {
     bool operator()(T const &lhs, T const &rhs) const {
@@ -19,11 +19,13 @@ struct PointerLess {
     }
 };
 
-typedef std::shared_ptr<AbstractSimpleSet> AbstractSimpleSetPtr_t;
-typedef std::shared_ptr<AbstractCompositeSet> AbstractCompositeSetPtr_t;
+/* ---------- TYPEDEFS (only this block changed) ---------- */
+using AbstractSimpleSetPtr_t    = std::shared_ptr<AbstractSimpleSet>;
+using AbstractCompositeSetPtr_t = std::shared_ptr<AbstractCompositeSet>;
 
-typedef std::set<AbstractSimpleSetPtr_t, PointerLess<AbstractSimpleSetPtr_t>> SimpleSetSet_t;
-typedef std::shared_ptr<SimpleSetSet_t> SimpleSetSetPtr_t;
+using SimpleSetSet_t     = FlatSet<AbstractSimpleSetPtr_t,
+                                   PointerLess<AbstractSimpleSetPtr_t>>;
+using SimpleSetSetPtr_t  = std::shared_ptr<SimpleSetSet_t>;
 
 template<typename... Args>
 SimpleSetSetPtr_t make_shared_simple_set_set(Args&&... args) {

@@ -10,7 +10,7 @@ TEST(Symbolic, ConstructorAndCompartor) {
     auto symbol = make_shared_symbolic(name, all_elements);
     EXPECT_EQ(symbol->name, name);
     EXPECT_EQ(symbol->domain->all_elements, all_elements);
-    EXPECT_EQ(symbol->domain->simple_sets->size(), 3);
+    EXPECT_EQ(symbol->domain->simple_sets->size(), 1);
 
     auto name2 = std::make_shared<std::string>("y");
     auto all_elements2 = make_shared_all_elements(std::set<long long>{0, 1});

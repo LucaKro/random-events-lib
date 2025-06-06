@@ -3,8 +3,55 @@
 #include "interval.h"
 #include "product_algebra.h"
 #include "set.h"
+#include "flat_set.h"    
 
 namespace py = pybind11;
+
+/* -------------------------------------------------------------------- *
+ *        pybind11 type-caster for FlatSet<…> (SimpleSetSet_t)          *
+ * -------------------------------------------------------------------- */
+namespace pybind11 { namespace detail {
+
+template <typename T, typename Compare>
+struct type_caster< FlatSet<T, Compare> > {
+    using Flat = FlatSet<T, Compare>;
+    using value_conv = make_caster<T>;
+
+    PYBIND11_TYPE_CASTER(Flat, _("FlatSet"));
+
+    /* ---------- Python → C++ ---------- */
+    bool load(handle src, bool) {
+        // Accept anything that is iterable
+        try {
+            Flat tmp;
+            for (handle item : py::reinterpret_borrow<py::iterable>(src)) {
+                tmp.insert(item.cast<T>());
+            }
+            value = std::move(tmp);
+            return true;
+        } catch (const cast_error &) {          // element not convertible to T
+            return false;
+        } catch (const error_already_set &) {   // not iterable
+            return false;
+        }
+    }
+
+
+    /* ---------- C++ → Python ---------- */
+    static handle cast(const Flat &src,
+                       return_value_policy policy,
+                       handle parent) {
+        py::set pyset;
+        for (auto const &elem : src) {
+            pyset.add(py::cast(elem, policy, parent));
+        }
+        return pyset.release();
+    }
+};
+
+}} // namespace pybind11::detail
+/* -------------------------------------------------------------------- */
+
 
 PYBIND11_MODULE(random_events_lib, handle) {
     handle.doc()= "A module for handling random events";

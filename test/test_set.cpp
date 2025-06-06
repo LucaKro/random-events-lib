@@ -34,14 +34,18 @@ TEST(SetElement, IntersectionWith) {
 }
 
 TEST(SetElement, Complement) {
-    AllSetElementsPtr_t all_elements = make_shared_all_elements(std::set<long long>{0, 1, 2});
+    auto all_elements = make_shared_all_elements(std::vector<long long>{0, 1, 2});
     auto set_element1 = make_shared_set_element(1, all_elements);
-    auto set_element2 = make_shared_set_element(2, all_elements);
 
     auto result = set_element1->complement();
-    EXPECT_EQ(result->size(), 2);
-    EXPECT_EQ(result->count(set_element1), 0);
-    EXPECT_EQ(result->count(set_element2), 1);
+    /* With bit-vector backend the complement is ONE simple-set
+       whose two bits (0 and 2) are 1. */
+    EXPECT_EQ(result->size(), 1);
+
+    auto complement_bits = std::static_pointer_cast<BitsetSimpleSet>(*result->begin());
+    EXPECT_TRUE(complement_bits->bits().test(0));
+    EXPECT_TRUE(complement_bits->bits().test(2));
+    EXPECT_FALSE(complement_bits->bits().test(1));
 }
 
 TEST(Set, Simplify){
