@@ -1,7 +1,7 @@
 #pragma once
 
 #include "sigma_algebra.h"
-#include <map>
+#include "flat_vector_map.h"
 #include <memory>
 #include "variable.h"
 #include <variant>
@@ -13,7 +13,10 @@ class Event;
 
 
 // TYPEDEFS
-using VariableMap = std::map<AbstractVariablePtr_t, AbstractCompositeSetPtr_t, PointerLess<AbstractVariablePtr_t>>;
+/* TYPEDEFS */
+using VariableMap = FlatVectorMap<AbstractVariablePtr_t,
+                                  AbstractCompositeSetPtr_t,
+                                  PointerLess<AbstractVariablePtr_t>>;
 using VariableMapPtr_t = std::shared_ptr<VariableMap>;
 using SimpleEventPtr_t = std::shared_ptr<SimpleEvent>;
 using EventPtr_t = std::shared_ptr<Event>;

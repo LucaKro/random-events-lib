@@ -50,6 +50,43 @@ struct type_caster< FlatSet<T, Compare> > {
 };
 
 }} // namespace pybind11::detail
+
+/* ---------- pybind11 caster for FlatVectorMap<K,V> ------------------ */
+namespace pybind11 { namespace detail {
+
+template<typename K, typename V, typename Cmp>
+struct type_caster< FlatVectorMap<K,V,Cmp> > {
+    using Map  = FlatVectorMap<K,V,Cmp>;
+    using pair_caster = make_caster<std::pair<K,V>>;
+
+    PYBIND11_TYPE_CASTER(Map, _("FlatVectorMap"));
+
+    /* Python -> C++ */
+    bool load(handle src, bool) {
+        if (!PyDict_Check(src.ptr())) return false;
+        value.clear();
+        py::dict d = reinterpret_borrow<py::dict>(src);
+        for (auto item : d) {
+            K k   = item.first.cast<K>();
+            V val = item.second.cast<V>();
+            value.insert({std::move(k), std::move(val)});
+        }
+        return true;
+    }
+
+    /* C++ -> Python */
+    static handle cast(const Map &m, return_value_policy policy, handle parent) {
+        py::dict d;
+        for (auto const& kv : m) {
+            d[py::cast(kv.first, policy, parent)] =
+                py::cast(kv.second, policy, parent);
+        }
+        return d.release();
+    }
+};
+
+}} // namespace pybind11::detail
+
 /* -------------------------------------------------------------------- */
 
 

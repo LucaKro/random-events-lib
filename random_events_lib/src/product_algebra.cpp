@@ -10,78 +10,35 @@
 // ===============================
 //
 
-// Helper: Collect all keys of a map<AbstractVariablePtr_t, ...> into a sorted vector.
-//   We use this for merging or iterating without rebuilding a std::set each time.
 static std::vector<AbstractVariablePtr_t>
 map_keys_to_vector(const VariableMapPtr_t &varmap) {
     std::vector<AbstractVariablePtr_t> keys;
     keys.reserve(varmap->size());
-    for (auto const &kv : *varmap) {
-        keys.push_back(kv.first);
-    }
-    // 'varmap' is already in sorted order (PointerLess), so 'keys' is sorted.
+    for (auto const &kv : varmap->raw()) keys.push_back(kv.first);
     return keys;
 }
 
+AbstractSimpleSetPtr_t
+SimpleEvent::intersection_with(const AbstractSimpleSetPtr_t &other) {
+    const auto& rhs = static_cast<const SimpleEvent&>(*other);
 
-AbstractSimpleSetPtr_t SimpleEvent::intersection_with(const AbstractSimpleSetPtr_t &other) {
-    // We want to build: ∀ v in (vars_self ∪ vars_other), the appropriate assignment intersection.
-    //
-    // 1) Extract maps and keys
-    const auto self_map  = variable_map;  
-    const auto other_ptr = static_cast<SimpleEvent *>(other.get());
-    const auto other_map = other_ptr->variable_map;
+    auto result = make_shared_simple_event();
+    auto &res   = result->variable_map->raw();   // writable vector
 
-    // Fetch keys in sorted order (no need to build a full std::set for union if we merge two sorted vectors)
-    auto self_keys  = map_keys_to_vector(self_map);
-    auto other_keys = map_keys_to_vector(other_map);
-
-    // 2) Merge two sorted lists into one union‐vector (two‐pointer sweep)
-    std::vector<AbstractVariablePtr_t> all_keys;
-    all_keys.reserve(self_keys.size() + other_keys.size());
-    size_t i = 0, j = 0;
-    while (i < self_keys.size() || j < other_keys.size()) {
-        if (i == self_keys.size()) {
-            all_keys.push_back(other_keys[j++]);
-        } else if (j == other_keys.size()) {
-            all_keys.push_back(self_keys[i++]);
-        } else if ((*self_keys[i]) < (*other_keys[j])) {
-            // note: comparing AbstractVariablePtr_t by PointerLess requires deref; we can trust keys are sorted
-            all_keys.push_back(self_keys[i++]);
-        } else if ((*other_keys[j]) < (*self_keys[i])) {
-            all_keys.push_back(other_keys[j++]);
-        } else {
-            // equal variable pointer
-            all_keys.push_back(self_keys[i]);
+    const auto& A = variable_map->raw();
+    const auto& B = rhs.variable_map->raw();
+    std::size_t i=0, j=0;
+    while (i<A.size() || j<B.size()) {
+        if (j==B.size() || (i<A.size() && *A[i].first < *B[j].first)) {
+            res.emplace_back(A[i]); ++i;
+        } else if (i==A.size() || *B[j].first < *A[i].first) {
+            res.emplace_back(B[j]); ++j;
+        } else {                    // same variable
+            auto inter = A[i].second->intersection_with(B[j].second);
+            res.emplace_back(A[i].first, inter);
             ++i; ++j;
         }
     }
-
-    // 3) Build the resulting SimpleEvent in one shot
-    auto result = make_shared_simple_event();
-    auto &res_map = result->variable_map;  // alias for convenience
-
-    // 4) For each variable in the merged key‐list, decide which assignment to insert
-    for (auto const &var : all_keys) {
-        // both present?
-        auto it_self  = self_map->find(var);
-        auto it_other = other_map->find(var);
-
-        if (it_self != self_map->end() && it_other != other_map->end()) {
-            // Present in both: intersect the two composite assignments
-            auto inter_assign = it_self->second->intersection_with(it_other->second);
-            res_map->insert({var, inter_assign});
-        }
-        else if (it_self != self_map->end()) {
-            // Only in self
-            res_map->insert({var, it_self->second});
-        }
-        else {
-            // Only in other
-            res_map->insert({var, it_other->second});
-        }
-    }
-
     return result;
 }
 
